@@ -6,7 +6,7 @@
 
 [![node](https://img.shields.io/badge/node-%E2%89%A520-3fb950?style=flat-square)](https://nodejs.org)
 [![dependencies](https://img.shields.io/badge/dependencies-0-4493f8?style=flat-square)](package.json)
-[![tests](https://img.shields.io/badge/tests-24_passing-3fb950?style=flat-square)](test/run.js)
+[![test](https://github.com/jayj221/tierline/actions/workflows/test.yml/badge.svg)](https://github.com/jayj221/tierline/actions/workflows/test.yml)
 [![license](https://img.shields.io/badge/license-MIT-656c76?style=flat-square)](LICENSE)
 
 </div>
