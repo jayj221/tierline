@@ -1,0 +1,19 @@
+{
+  "name": "tierline",
+  "version": "0.1.0",
+  "description": "Work out which AI model should actually run a prompt, and what routing everything to a flagship is costing you.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "bin": { "tierline": "bin/tierline.js" },
+  "files": ["src", "bin", "mcp", "public", "server.js"],
+  "scripts": {
+    "test": "node test/run.js",
+    "start": "node server.js",
+    "mcp": "node mcp/server.js"
+  },
+  "keywords": ["llm", "router", "model-routing", "cost-optimization", "finops", "ai", "mcp", "openai", "anthropic", "gemini"],
+  "engines": { "node": ">=20" },
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/jayj221/tierline.git" }
+}

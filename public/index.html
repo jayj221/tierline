@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tierline</title>
+<style>
+:root{--bg:#0d1117;--sf:#151b23;--sf2:#1c2128;--ln:#2f353d;--tx:#f0f6fc;--t2:#9198a1;--t3:#656c76;--gr:#3fb950;--rd:#f85149;--bl:#4493f8;--am:#d29922;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:820px;margin:0 auto;padding:48px 20px 80px}
+h1{font-size:28px;margin:0 0 6px;letter-spacing:-.4px}
+.sub{color:var(--t2);margin:0 0 28px;font-size:15px}
+textarea{width:100%;min-height:96px;background:#010409;color:var(--tx);border:1px solid #3d444d;border-radius:10px;padding:14px;font:15px/1.55 inherit;outline:none;resize:vertical}
+textarea:focus{border-color:var(--bl)}
+.bar{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+input{width:130px;background:#010409;color:var(--tx);border:1px solid #3d444d;border-radius:8px;padding:8px 11px;font:14px inherit;outline:none}
+button{background:#238636;border:1px solid #2ea043;color:#fff;font:600 14px inherit;padding:9px 18px;border-radius:8px;cursor:pointer}
+button:hover{background:#2ea043}
+button:disabled{opacity:.5}
+.ex{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}
+.ex b{background:var(--sf2);border:1px solid var(--ln);color:var(--t2);padding:4px 11px;border-radius:999px;font:500 12.5px inherit;cursor:pointer}
+.ex b:hover{color:var(--tx);border-color:#3d444d}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:12px;margin-top:22px;overflow:hidden}
+.card h2{margin:0;padding:12px 16px;background:var(--sf2);border-bottom:1px solid var(--ln);font:600 13px inherit;color:var(--t2)}
+.pad{padding:16px}
+.pick{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.pick .n{font-size:19px;font-weight:600}
+.pick .c{margin-left:auto;text-align:right}
+.pick .c b{font-family:var(--mono);font-size:21px;color:var(--gr)}
+.pick .c s{display:block;text-decoration:none;font-size:12px;color:var(--t3)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.tag{font:500 11.5px var(--mono);padding:2px 9px;border-radius:999px;border:1px solid var(--ln);color:var(--t2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--ln)}
+.cell{background:var(--sf);padding:14px 16px}
+.cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--t3)}
+.cell .v{font-family:var(--mono);font-size:19px;font-weight:700;margin-top:3px}
+.row{padding:12px 16px;border-bottom:1px solid var(--ln);display:flex;gap:12px;align-items:baseline}
+.row:last-child{border-bottom:0}
+.row .nm{font-weight:600;font-size:13.5px}
+.row .ds{color:var(--t2);font-size:12.5px;flex:1}
+.row .pr{font-family:var(--mono);font-size:12.5px;color:var(--t3)}
+.warn{padding:11px 16px;border-bottom:1px solid var(--ln);color:var(--t2);font-size:12.5px;line-height:1.55}
+.warn:last-child{border-bottom:0}
+.why{color:var(--t2);font-size:13.5px;margin:14px 0 0}
+footer{margin-top:34px;color:var(--t3);font-size:12.5px;line-height:1.6}
+a{color:var(--bl)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>tierline</h1>
+  <p class="sub">Paste a prompt. Find out which model should actually run it, and what routing everything to a flagship is costing you.</p>
+
+  <textarea id="p" placeholder="Summarise these 4000 support tickets into themes. We run this nightly for every ticket."></textarea>
+  <div class="bar">
+    <input id="n" type="number" min="1" value="10000">
+    <span style="color:var(--t3);font-size:13px">calls per month</span>
+    <button id="go">Pick a model</button>
+  </div>
+  <div class="ex" id="ex"></div>
+  <div id="out"></div>
+
+  <footer>
+    Prices are an approximate snapshot held in <code>src/models.js</code>, not a live feed. Vendors change them without notice and enterprise rates differ, so verify before budgeting.
+    <br><a href="https://github.com/jayj221/tierline">github.com/jayj221/tierline</a>
+  </footer>
+</div>
+<script type="module">
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money = (n) => n >= 1000 ? n.toLocaleString('en-US',{maximumFractionDigits:0}) : n.toFixed(2);
+const nameOf = (t, l) => l.toLowerCase().startsWith(t.toLowerCase()) ? l : `${t} ${l}`;
+
+const SAMPLES = [
+  ['Bulk transform', 'Summarise these 4000 support tickets into themes. We run this nightly for every ticket.', 100000],
+  ['Deep reasoning', 'Architect a multi region failover for our payment service and reason through the trade-offs.', 2000],
+  ['Repo work', 'Debug a race condition across our monorepo. It only shows up in production.', 1000],
+  ['Narration', 'Narrate this 60 second script with a warm, measured tone.', 5000],
+  ['High stakes', 'Review this vendor contract for liability exposure before we sign.', 300],
+];
+
+$('#ex').innerHTML = SAMPLES.map((s, i) => `<b data-i="${i}">${esc(s[0])}</b>`).join('');
+$('#ex').onclick = (e) => {
+  const b = e.target.closest('[data-i]');
+  if (!b) return;
+  const [, prompt, calls] = SAMPLES[+b.dataset.i];
+  $('#p').value = prompt; $('#n').value = calls; run();
+};
+$('#go').onclick = run;
+
+async function run() {
+  const prompt = $('#p').value.trim();
+  if (!prompt) return;
+  $('#go').disabled = true; $('#go').textContent = 'Reading';
+  try {
+    const res = await fetch('/api/recommend', {
+      method: 'POST', headers: {'content-type':'application/json'},
+      body: JSON.stringify({ prompt, monthlyCalls: +$('#n').value || 10000 }),
+    });
+    render(await res.json());
+  } finally {
+    $('#go').disabled = false; $('#go').textContent = 'Pick a model';
+  }
+}
+
+function render(r) {
+  const e = r.economics;
+  const sig = Object.entries(r.task.signals).filter(([,v]) => v).map(([k]) => k.replace(/([A-Z])/g,' $1').toLowerCase());
+  $('#out').innerHTML = `
+    <div class="card">
+      <h2>${esc(r.task.mode)} work at ${esc(r.task.tierName)} tier</h2>
+      <div class="pad">
+        <div class="pick">
+          <div>
+            <div class="n">${esc(nameOf(r.pick.tool, r.pick.label))}</div>
+            <div style="color:var(--t2);font-size:13px;margin-top:3px">${esc(r.pick.note)}</div>
+          </div>
+          <div class="c"><b>$${r.pick.costPerCall}</b><s>${esc(r.pick.unit)}</s></div>
+        </div>
+        <p class="why">${esc(r.pick.why)}</p>
+        <div class="tags">${sig.map((s) => `<span class="tag">${esc(s)}</span>`).join('')}</div>
+      </div>
+      <div class="grid">
+        <div class="cell"><div class="k">This routing</div><div class="v" style="color:var(--gr)">$${money(e.monthly)}</div></div>
+        <div class="cell"><div class="k">${esc(e.naiveModel)} only</div><div class="v" style="color:var(--rd)">$${money(e.naiveMonthly)}</div></div>
+        <div class="cell"><div class="k">Saved monthly</div><div class="v">$${money(e.savedMonthly)}</div></div>
+        <div class="cell"><div class="k">Reduction</div><div class="v">${e.savedPct}%</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Alternatives</h2>
+      ${r.alternatives.map((a) => `<div class="row"><span class="nm">${esc(nameOf(a.tool, a.label))}</span><span class="ds">${esc(a.note)}</span><span class="pr">$${a.costPerCall}</span></div>`).join('')}
+      ${r.subscriptions.map((s) => `<div class="row"><span class="nm">${esc(s.label)}</span><span class="ds">${esc(s.note)}</span><span class="pr">$${s.seatUsd}/seat</span></div>`).join('')}
+    </div>
+    <div class="card">
+      <h2>Before you route production traffic through this</h2>
+      ${r.cautions.map((c) => `<div class="warn">${esc(c)}</div>`).join('')}
+    </div>`;
+}
+</script>
+</body>
+</html>
