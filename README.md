@@ -23,6 +23,10 @@ $ npx tierline "summarise these 4000 support tickets into themes, we run this ni
   saves $3,017 a month, 99%
 ```
 
+<div align="center">
+  <img src="docs/screenshot.png" alt="tierline picking a model for a bulk summarisation job" width="720">
+</div>
+
 Most teams pick one frontier model and send everything to it. That is the single most expensive habit in an AI budget, because the majority of production prompts are transforms that a model costing a hundredth as much would handle identically.
 
 tierline reads the prompt, works out what the job actually needs, and names the cheapest model that clears that bar.
