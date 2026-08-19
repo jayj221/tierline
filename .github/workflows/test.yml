@@ -17,4 +17,5 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: node test/run.js
+      - run: node test/eval.js
       - run: node bin/tierline.js "summarise these tickets" --json > /dev/null

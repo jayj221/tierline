@@ -36,3 +36,11 @@ if (misses.length) {
   }
 }
 console.log();
+
+// Being one tier high costs money and one tier low costs quality. Both are
+// survivable. Two tiers out is a real miss, so that is what CI blocks on.
+const wayOff = CORPUS.filter((c) => Math.abs(classify(c.p).tier - c.tier) > 1);
+if (wayOff.length) {
+  console.log(`  ${wayOff.length} prompt(s) more than one tier out, failing\n`);
+  process.exit(1);
+}
