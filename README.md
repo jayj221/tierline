@@ -24,7 +24,7 @@ $ npx tierline "summarise these 4000 support tickets into themes, we run this ni
 ```
 
 <div align="center">
-  <img src="docs/screenshot.png" alt="tierline picking a model for a bulk summarisation job" width="720">
+  <img src="docs/screenshot.png" alt="tierline picking a model for a bulk summarisation job" width="760">
 </div>
 
 Most teams pick one frontier model and send everything to it. That is the single most expensive habit in an AI budget, because the majority of production prompts are transforms that a model costing a hundredth as much would handle identically.
@@ -37,7 +37,7 @@ tierline reads the prompt, works out what the job actually needs, and names the 
 npx tierline "your prompt here"
 ```
 
-Or clone it and run the web UI:
+Or clone it for the web UI, which has the catalogue and the rankings:
 
 ```bash
 git clone https://github.com/jayj221/tierline.git
@@ -47,6 +47,32 @@ node server.js
 ```
 
 No dependencies, no build step, no API key. It never calls a model, it only decides which one you should call.
+
+## Flagship tax
+
+Adoption rankings tell you what everyone else is buying. This tells you what buying it costs.
+
+If you standardised on one model across the 39 task corpus, falling back where it cannot reach, here is the multiple of the optimal bill you would pay:
+
+| Model | Blended cost | Covers |
+| :--- | ---: | ---: |
+| Claude Opus 5 | 6.96x | 69% |
+| GPT-5.2 | 4.41x | 69% |
+| Claude Sonnet 5 | 1.32x | 51% |
+| Gemini 3 Pro | 1.20x | 74% |
+| DeepSeek V4 | 1.00x | 51% |
+
+Gemini 3 Pro reaches more of the corpus than Claude Opus 5 and costs a sixth as much to standardise on. That gap is the entire product.
+
+<div align="center">
+  <img src="docs/rankings.png" alt="flagship tax rankings" width="760">
+</div>
+
+## Browse the catalogue
+
+<div align="center">
+  <img src="docs/models.png" alt="model catalogue with modality and tier filters" width="760">
+</div>
 
 ## How the tier gets set
 
@@ -113,13 +139,32 @@ Inference proxies like OpenRouter Auto, RouteLLM and LiteLLM sit in the request 
 
 tierline is none of those. It runs before the call, spans modalities rather than just text LLMs, picks the tool as well as the tier, and projects the monthly bill against a flagship-for-everything baseline. The pieces exist separately. The combination did not.
 
+## Accuracy
+
+The classifier is scored against 39 labelled prompts in [`src/corpus.js`](src/corpus.js), weighted toward the awkward cases.
+
+```bash
+npm run eval
+```
+
+| | |
+| :--- | ---: |
+| Mode exact | 100% |
+| Tier exact | 95% |
+| Tier within one | 100% |
+
+The two disagreements are arguable rather than wrong: unit tests are a fair step above light, and an instrumental bed is arguably not standard work. They are left in rather than tuned away, because a corpus you edit until the number looks good measures nothing.
+
+CI fails if any prompt lands more than one tier from its label. One tier out costs money or quality, two is a real miss.
+
 ## Tests
 
 ```bash
-npm test
+npm test   # 30 assertions
+npm run eval
 ```
 
-24 assertions over classification, tier floors and ceilings, seat priced tools staying out of the per call ranking, monotonic scaling, and the catalogue being well formed.
+Classification, tier floors and ceilings, seat priced tools staying out of the per call ranking, monotonic scaling, catalogue integrity, and the ranking invariants.
 
 ## License
 
