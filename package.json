@@ -9,6 +9,7 @@
   "files": ["src", "bin", "mcp", "public", "server.js"],
   "scripts": {
     "test": "node test/run.js",
+    "eval": "node test/eval.js",
     "start": "node server.js",
     "mcp": "node mcp/server.js"
   },
