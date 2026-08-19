@@ -17,7 +17,7 @@ export const CORPUS = [
   { p: 'rewrite this paragraph to be shorter', mode: 'text', tier: 1 },
   { p: 'translate this page into German', mode: 'text', tier: 1 },
   { p: 'write a subject line for this email', mode: 'text', tier: 1 },
-  { p: 'give me a tl;dr of these meeting notes', mode: 'text', tier: 1 },
+  { p: 'give me a tl;dr of these meeting notes', mode: 'docs', tier: 1 },
   { p: 'proofread this blog post', mode: 'text', tier: 1 },
 
   // standard, tier 2

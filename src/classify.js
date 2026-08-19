@@ -5,14 +5,15 @@ const RX = {
   music: /\b(music|song|soundtrack|beat|instrumental|score|jingle|theme tune)\w*/i,
   transcribe: /\b(transcri|caption|subtitle|srt|diariz)\w*/i,
   search: /\b(latest|current|recent|today|this week|news|up to date|who won|stock price|cite sources|look up)\w*/i,
-  code: /\b(functions?|class(es)?|methods?|bugs?|stack ?traces?|apis?|endpoints?|typescript|javascript|python|rust|golang|sql|regexp?|compiles?|unit tests?|deploys?|docker|kubernetes|schemas?)\b/i,
-  repo: /\b(codebase|repository|repo|monorepo|across files|whole project|entire project|all the files|migration)\w*/i,
+  code: /\b(functions?|class(es)?|methods?|bugs?|stack ?traces?|apis?|endpoints?|typescript|javascript|python|rust|golang|sql|regexp?|compiles?|unit tests?|deploys?|docker|kubernetes|schemas?|race conditions?|refactors?)\b/i,
+  repo: /\b(codebase|repository|repo|monorepo|across files|whole project|entire project|all the files)\w*/i,
   app: /\b(landing page|web app|build me a site|dashboard|prototype|crud|full stack)\w*/i,
   docs: /\b(my notes|our wiki|knowledge base|workspace|meeting notes|internal docs)\w*/i,
 };
 
 const DEEP = /\b(architect|design a system|prove|derive|root cause|trade-?off|refactor|migrate|optimi[sz]|security review|algorithm|race condition|distributed|why does|edge case|deep(ly)? analy|reason through|step by step|critique|strategy|forecast|model the)\w*/i;
-const SHALLOW = /\b(summari[sz]|tl;?dr|rewrite|rephrase|translate|extract|classif|categori[sz]|tag|label|format|proofread|spellcheck|shorten|subject line|title for|bullet points|clean up)\w*/i;
+const GENERATIVE = /\b(draft|write (a|an|the|some|onboarding|docs|copy)|compose|author|create (a|an) (post|page|doc|guide|announcement)|announcement|changelog|onboarding|blog post|press release)\w*/i;
+const SHALLOW = /\b(summari[sz]|tl;?dr|rewrite|rephrase|translate|extract|classif|categori[sz]|dedup|tags?\b|labels?\b|reformat|proofread|spellcheck|shorten|subject line|title for|bullet points|clean up)\w*/i;
 const STAKES = /\b(production|customer facing|legal|contract|compliance|medical|clinical|diagnos|financial statement|audit|security|regulat|patient|liabilit)\w*/i;
 const VOLUME = /\b(every|all of|bulk|batch|thousands|millions|\d{3,}\s*(rows|records|documents|tickets|emails|items)|at scale|per day|nightly)\w*/i;
 const LONG_OUT = /\b(essay|report|whitepaper|long form|detailed write-?up|full draft|chapter|\d{3,}\s*words)\w*/i;
@@ -24,33 +25,45 @@ export function classify(prompt) {
   const p = String(prompt || '');
   const hits = (rx) => (rx.test(p) ? 1 : 0);
 
-  let mode = 'text';
-  for (const m of ['voice', 'video', 'image', 'music', 'transcribe']) {
-    if (RX[m].test(p)) { mode = m; break; }
-  }
-  if (mode === 'text') {
-    if (RX.repo.test(p) || RX.app.test(p)) mode = 'repo';
-    else if (RX.code.test(p)) mode = 'code';
-    else if (RX.search.test(p)) mode = 'search';
-    else if (RX.docs.test(p)) mode = 'docs';
-  }
+  const at = (rx) => {
+    const m = p.match(rx);
+    return m ? m.index : Infinity;
+  };
+  const candidates = [
+    ['voice', at(RX.voice)], ['video', at(RX.video)], ['image', at(RX.image)],
+    ['music', at(RX.music)], ['transcribe', at(RX.transcribe)],
+    ['repo', Math.min(at(RX.repo), at(RX.app))],
+    ['search', at(RX.search)], ['code', at(RX.code)], ['docs', at(RX.docs)],
+  ].filter(([, i]) => i !== Infinity).sort((a, b) => a[1] - b[1]);
+
+  let mode = candidates.length ? candidates[0][0] : 'text';
+  // A search question that happens to mention an api is still a search
+  // question, so search outranks code when both are present.
+  if (mode === 'code' && at(RX.search) !== Infinity) mode = 'search';
+  // Repo scope is a superset of code work. "refactor across our monorepo"
+  // leads with a code word but the monorepo is what decides the routing.
+  if (mode === 'code' && (at(RX.repo) !== Infinity || at(RX.app) !== Infinity)) mode = 'repo';
 
   const deep = hits(DEEP);
   const shallow = hits(SHALLOW);
   const stakes = hits(STAKES);
   const volume = hits(VOLUME);
 
+  const generative = hits(GENERATIVE);
+
   let tier = 1;
-  if (deep) tier += 2;
-  if (RX.repo.test(p) && RX.code.test(p)) tier += 1;
-  if (shallow && !deep) tier -= 1;
+  if (generative && !shallow) tier = 2;
+  if (deep) tier = 3;
+  if (shallow && !deep) tier = 1;
+  if (mode === 'repo') tier = RX.code.test(p) || deep ? 3 : 2;
   if (p.length > 900) tier += 1;
   tier = Math.max(0, Math.min(3, tier));
 
   // Stakes set a floor you cannot cost cut through. Volume pulls the ceiling
-  // down, but only when nothing about the task says it has to be right.
+  // down, but only when nothing about the task says it has to be right, and
+  // only all the way to the floor when the work is also shallow.
   if (stakes) tier = Math.max(tier, 2);
-  if (volume && !stakes && !deep) tier = Math.min(tier, 1);
+  if (volume && !stakes && !deep) tier = shallow ? 0 : Math.min(tier, 1);
 
   const promptTokens = Math.ceil(p.length / 4);
   let contextTokens = 0;
@@ -71,6 +84,7 @@ export function classify(prompt) {
     signals: {
       deepReasoning: !!deep,
       shallowTransform: !!shallow,
+      generative: !!generative,
       highStakes: !!stakes,
       highVolume: !!volume,
       needsRepoContext: RX.repo.test(p),
