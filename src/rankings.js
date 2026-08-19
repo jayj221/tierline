@@ -10,22 +10,27 @@ export function flagshipTax({ monthlyCalls = 10000 } = {}) {
   const optimalTotal = optimal.reduce((s, r) => s + r.economics.perCall, 0);
 
   const rows = MODELS.filter((m) => !m.seat && m.modes.includes('text')).map((m) => {
-    let mine = 0;
-    let best = 0;
+    let blended = 0;
     let handled = 0;
 
+    // Standardising on one model does not mean it can do everything. Where it
+    // cannot, you fall back to something that can, and you still pay for that.
+    // Scoring every model over the whole corpus with that fallback is the only
+    // way the multiples compare like for like. Scoring each model only on the
+    // work it happens to cover compares different task sets and produces
+    // nonsense, such as a mid tier model looking dearer than a frontier one
+    // purely because the tasks it can reach have cheap optimal answers.
     CORPUS.forEach((c, i) => {
       const task = optimal[i].task;
       const needed = task.mode === 'repo' ? 'code' : task.mode;
       const canDo = task.mode === 'text' || m.modes.includes(needed);
-      // Under the tier the task needs, or wrong modality, means this model is
-      // not a cheap option. It is the wrong answer at any price, so it is
-      // excluded from the cost comparison rather than scored as free.
-      if (!canDo || m.tier < task.tier) return;
+      if (!canDo || m.tier < task.tier) {
+        blended += optimal[i].economics.perCall;
+        return;
+      }
       handled++;
       const est = task.estimate;
-      mine += (est.inTokens / 1e6) * m.in + (est.outTokens / 1e6) * m.out;
-      best += optimal[i].economics.perCall;
+      blended += (est.inTokens / 1e6) * m.in + (est.outTokens / 1e6) * m.out;
     });
 
     const coverage = Math.round((handled / CORPUS.length) * 100);
@@ -36,11 +41,11 @@ export function flagshipTax({ monthlyCalls = 10000 } = {}) {
       tier: m.tier,
       note: m.note,
       coverage,
-      // Only meaningful for a model that could plausibly serve as the single
-      // default, so anything under half the corpus is marked not viable.
+      // A model reaching under half the corpus was never a candidate to
+      // standardise on, so it is listed but kept out of the headline ranking.
       viable: coverage >= 50,
-      multiple: best > 0 ? Number((mine / best).toFixed(2)) : null,
-      monthlyIfEverything: handled > 0 ? Number(((mine / handled) * monthlyCalls).toFixed(2)) : null,
+      multiple: Number((blended / optimalTotal).toFixed(2)),
+      monthlyIfEverything: Number(((blended / CORPUS.length) * monthlyCalls).toFixed(2)),
     };
   });
 

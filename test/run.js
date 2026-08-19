@@ -1,6 +1,7 @@
 import { classify } from '../src/classify.js';
 import { recommend } from '../src/recommend.js';
 import { MODELS } from '../src/models.js';
+import { flagshipTax, pickShare } from '../src/rankings.js';
 
 let pass = 0, fail = 0;
 const t = (name, fn) => {
@@ -61,6 +62,32 @@ t('every prompt returns a pick', () => {
   for (const p of ['', 'hi', 'x'.repeat(3000), 'make me a song about databases']) {
     ok(recommend(p).pick.id, `no pick for "${p.slice(0, 20)}"`);
   }
+});
+
+console.log('\nrankings');
+t('no model beats optimal routing', () => {
+  for (const r of flagshipTax().rows) ok(r.multiple >= 1, `${r.label} scored ${r.multiple}x, below optimal`);
+});
+t('frontier models cost more than mid tier ones as a default', () => {
+  const rows = flagshipTax().rows;
+  const opus = rows.find((r) => r.id === 'claude-opus-5');
+  const sonnet = rows.find((r) => r.id === 'claude-sonnet-5');
+  ok(opus.multiple > sonnet.multiple, `opus ${opus.multiple}x was not above sonnet ${sonnet.multiple}x`);
+});
+t('coverage is a percentage', () => {
+  for (const r of flagshipTax().rows) ok(r.coverage >= 0 && r.coverage <= 100, `${r.label} coverage ${r.coverage}`);
+});
+t('viable means at least half the corpus', () => {
+  for (const r of flagshipTax().rows) eq(r.viable, r.coverage >= 50, `${r.label} viability disagrees with coverage`);
+});
+t('monthly scales with calls', () => {
+  const a = flagshipTax({ monthlyCalls: 1000 }).optimalMonthly;
+  const b = flagshipTax({ monthlyCalls: 2000 }).optimalMonthly;
+  ok(Math.abs(b - a * 2) < 0.02, `${b} is not double ${a}`);
+});
+t('pick share sums to about 100', () => {
+  const total = pickShare().reduce((s, x) => s + x.share, 0);
+  ok(Math.abs(total - 100) <= 3, `shares summed to ${total}`);
 });
 
 console.log('\ncatalogue');
