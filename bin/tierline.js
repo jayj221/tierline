@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 import { recommend } from '../src/recommend.js';
 
 const argv = process.argv.slice(2);
@@ -16,7 +17,10 @@ if ('calls' in flags && !(Number.isFinite(flags.calls) && flags.calls > 0)) {
   process.exit(1);
 }
 
-const prompt = words.join(' ').trim();
+// No prompt on the command line and something piped in: read it from stdin,
+// so `cat prompt.txt | tierline` works for prompts too long to quote.
+let prompt = words.join(' ').trim();
+if (!prompt && !process.stdin.isTTY) prompt = readFileSync(0, 'utf8').trim();
 
 if (flags.help || !prompt) {
   console.log(`
@@ -24,6 +28,7 @@ if (flags.help || !prompt) {
 
   usage
     tierline "<your prompt>" [--calls N] [--json]
+    cat prompt.txt | tierline [--calls N] [--json]
 
   options
     -n, --calls N   how often this runs per month, default 10000
