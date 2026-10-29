@@ -11,6 +11,11 @@ for (let i = 0; i < argv.length; i++) {
   else words.push(argv[i]);
 }
 
+if ('calls' in flags && !(Number.isFinite(flags.calls) && flags.calls > 0)) {
+  console.error('  --calls needs a positive number, e.g. --calls 50000');
+  process.exit(1);
+}
+
 const prompt = words.join(' ').trim();
 
 if (flags.help || !prompt) {
