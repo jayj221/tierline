@@ -27,7 +27,7 @@ $ npx tierline "summarise these 4000 support tickets into themes, we run this ni
   <img src="docs/screenshot.png" alt="tierline picking a model for a bulk summarisation job" width="760">
 </div>
 
-Most teams pick one frontier model and send everything to it. That is the single most expensive habit in an AI budget, because the majority of production prompts are transforms that a model costing a hundredth as much would handle identically.
+Most teams pick one frontier model and send everything to it. That overspends, because most production prompts are transforms that a model costing a hundredth as much would handle identically.
 
 tierline reads the prompt, works out what the job actually needs, and names the cheapest model that clears that bar.
 
@@ -46,11 +46,11 @@ npm test
 node server.js
 ```
 
-No dependencies, no build step, no API key. It never calls a model, it only decides which one you should call.
+It has no dependencies or build step and needs no API key. It does not call any model; it only recommends one.
 
 ## Flagship tax
 
-Adoption rankings tell you what everyone else is buying. This tells you what buying it costs.
+This ranking shows what standardising on each model would cost across the corpus.
 
 If you standardised on one model across the 39 task corpus, falling back where it cannot reach, here is the multiple of the optimal bill you would pay:
 
@@ -62,7 +62,7 @@ If you standardised on one model across the 39 task corpus, falling back where i
 | Gemini 3 Pro | 1.20x | 74% |
 | DeepSeek V4 | 1.00x | 51% |
 
-Gemini 3 Pro reaches more of the corpus than Claude Opus 5 and costs a sixth as much to standardise on. That gap is the entire product.
+Gemini 3 Pro reaches more of the corpus than Claude Opus 5 and costs a sixth as much to standardise on.
 
 <div align="center">
   <img src="docs/rankings.png" alt="flagship tax rankings" width="760">
